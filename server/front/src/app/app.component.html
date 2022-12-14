@@ -1,0 +1,142 @@
+
+<ng-template #picture>
+  <img [src]="imageURL" alt="Image taken" class="picture"/>
+</ng-template>
+
+<ng-template #loading>
+  <ng-lottie width="200px" height="200px" [options]="{ path: '/assets/loading.json' }"></ng-lottie>
+</ng-template>
+
+<ng-template #check>
+  <ng-lottie width="200px" height="200px" [options]="{ path: '/assets/check.json', loop: false }"></ng-lottie>
+</ng-template>
+
+<ng-template #refuse>
+  <ng-lottie width="200px" height="200px" [options]="{ path: '/assets/refuse.json', loop: false }"></ng-lottie>
+</ng-template>
+
+<header class="header">
+  <img src="assets/logo.png" alt="Les zexperts"/>
+  <img src="assets/cesi.jpg" alt="CESI"/>
+</header>
+<main class="main">
+  <aside>
+    <ng-container *ngIf="robot_success">
+      <ng-lottie width="500px" height="500px" [options]="{ path: '/assets/success-robot.json' }"></ng-lottie>
+    </ng-container>
+    <ng-container *ngIf="robot_error">
+      <ng-lottie width="500px" height="500px" [options]="{ path: '/assets/angry-robot.json' }"></ng-lottie>
+    </ng-container>
+    <ng-container *ngIf="!robot_error && !robot_success">
+      <ng-lottie width="500px" height="500px" [options]="{ path: '/assets/robot.json' }"></ng-lottie>
+    </ng-container>
+  </aside>
+  <mat-vertical-stepper [linear]="false" #stepper linear>
+    <mat-step label="Donnez-moi une image à décrire !"  *ngIf="!verif">
+      <div class="column-step">
+        <ng-container *ngIf="image; else ifNoImage">
+          <ng-container *ngTemplateOutlet="picture"></ng-container>
+          <div class="actions">
+            <button mat-fab color="warn" (click)="image = undefined">
+              <mat-icon>refresh</mat-icon>
+            </button>
+            <button mat-fab color="primary" (click)="verifyImage()">
+              <mat-icon>navigate_next</mat-icon>
+            </button>
+          </div>
+        </ng-container>
+        <ng-template #ifNoImage>
+          <webcam (initError)="handleInitError($event)"
+                  (imageCapture)="capture($event)"
+                  [trigger]="captureTrigger"
+                  [width]="400"
+                  class="picture">
+          </webcam>
+          <div class="actions">
+            <button type="button" mat-fab color="primary" (click)="fileInput.click()">
+              <mat-icon>upload</mat-icon>
+            </button>
+            <button mat-fab color="primary" (click)="captureTrigger.next()">
+              <mat-icon>add_a_photo</mat-icon>
+            </button>
+            <input hidden (change)="onFileSelected()" #fileInput type="file" id="file" accept="image/jpeg">
+          </div>
+        </ng-template>
+      </div>
+    </mat-step>
+    <mat-step label="Je vérifie que l'image est bien une photographie." *ngIf="!denoisedImageURL">
+      <div class="inline">
+        <ng-container *ngIf="verif; else loading">
+          <ng-container *ngIf="verif.is_photo; else noPhoto">
+            <ng-container *ngTemplateOutlet="check"></ng-container>
+            <div class="actions">
+              <button mat-fab color="warn" (click)="reset()">
+                <mat-icon>refresh</mat-icon>
+              </button>
+              <button mat-fab color="primary" (click)="denoiseImage()">
+                <mat-icon>navigate_next</mat-icon>
+              </button>
+            </div>
+          </ng-container>
+          <ng-template #noPhoto>
+            <ng-container *ngTemplateOutlet="refuse"></ng-container>
+            <div class="actions">
+              <button mat-fab color="warn" (click)="reset()">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
+          </ng-template>
+        </ng-container>
+      </div>
+    </mat-step>
+    <mat-step label="Je débruite votre image." *ngIf="!caption">
+      <div class="inline">
+        <ng-container *ngIf="denoisedImageURL && noisedImageURL; else loading">
+          <div class="inline">
+            <img-comparison-slider>
+              <img slot="first" [src]="noisedImageURL" alt="Image taken" class="picture denoised"/>
+              <img slot="second" [src]="denoisedImageURL" alt="Image taken" class="picture denoised"/>
+            </img-comparison-slider>
+          </div>
+          <div class="actions">
+            <button mat-fab color="primary" (click)="generateCaption()">
+              <mat-icon>navigate_next</mat-icon>
+            </button>
+          </div>
+        </ng-container>
+      </div>
+    </mat-step>
+    <mat-step label="Voici ce que j'ai compris !">
+      <ng-container *ngIf="caption; else loading">
+        <div class="column-step">
+          <div class="inline">
+            <img [src]="imageURL" alt="Image taken" class="picture"/>
+            <div class="actions">
+              <button mat-fab color="primary" (click)="stepper.next()">
+                <mat-icon>navigate_next</mat-icon>
+              </button>
+            </div>
+          </div>
+          <p>{{ caption }}</p>
+        </div>
+      </ng-container>
+    </mat-step>
+    <mat-step label="Récapitulons :">
+      <div class="column-step left" style="align-items: center">
+        <div class="inline" style="text-align: center;">
+          <img [src]="imageURL" alt="Image taken" class="picture denoised"/>
+          <img-comparison-slider>
+            <img slot="first" [src]="noisedImageURL" alt="Image taken" class="picture denoised"/>
+            <img slot="second" [src]="denoisedImageURL" alt="Image taken" class="picture denoised"/>
+          </img-comparison-slider>
+        </div>
+        <p style="text-align: center">{{ caption }}</p>
+        <div class="actions">
+          <button mat-fab color="warn" (click)="reset()">
+            <mat-icon>refresh</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-step>
+  </mat-vertical-stepper>
+</main>
